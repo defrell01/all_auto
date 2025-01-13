@@ -1,0 +1,17 @@
+app:
+  name: "Car Marketplace"
+  port: 8080
+
+database:
+  host: postgres
+  port: 5432
+  user: user
+  password: password
+  dbname: car_marketplace
+  sslmode: disable
+
+logger:
+  level: "debug"
+  logstash:
+    address: "logstash:5044"
+    enabled: true

@@ -1,0 +1,102 @@
+version: "3.8"
+
+services:
+  # Сервис PostgreSQL
+  postgres:
+    image: postgres:13
+    container_name: market_service_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - market_service_market_service_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+
+  # Сервис для Go-приложения
+  market_service:
+    build:
+      context: ../market_service
+      dockerfile: Dockerfile
+    container_name: market_service
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=${POSTGRES_USER}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_NAME=${POSTGRES_DB}
+      - LOGSTASH_HOST=logstash:5044
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - market_service_market_service_network
+    volumes:
+    - ../market_service/config/config.yaml:/app/config/config.yaml
+
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.io/library/elasticsearch:8.17.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - http.host=0.0.0.0
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    networks:
+      - market_service_market_service_network
+
+  # Logstash
+  logstash:
+    image: docker.io/library/logstash:8.17.0
+    container_name: logstash
+    volumes:
+      - ./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    environment:
+      - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    networks:
+      - market_service_market_service_network
+    depends_on:
+      - elasticsearch
+  # Kibana
+  kibana:
+    image: docker.io/library/kibana:8.17.0
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+    ports:
+      - "5601:5601"
+    networks:
+      - market_service_market_service_network
+    depends_on:
+      - elasticsearch
+
+networks:
+  market_service_market_service_network:
+    external: true
+
+
+volumes:
+  postgres_data:
+    driver: local
