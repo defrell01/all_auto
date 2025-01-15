@@ -57,14 +57,14 @@ func main() {
 	defer db.Close()
 	createTables(db)
 
-	carAdRepo := database.NewCarAdRepository(db)
+	carAdRepo := database.NewCarAdRepository(db, logger)
 
 	// Инициализация UseCase для создания объявления
 	carAdUsecase := usecase.NewCreateCarAdUseCase(carAdRepo)
 
 	// Инициализация HTTP-хендлеров
 	r := mux.NewRouter()
-	interfaces.NewCarAdHandler(r, carAdUsecase)
+	interfaces.NewCarAdHandler(r, carAdUsecase, logger)
 
 	// Запуск HTTP-сервера
 	address := fmt.Sprintf(":%d", cfg.App.Port)

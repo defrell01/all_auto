@@ -12,7 +12,7 @@ type Logger struct {
 	zapLogger *zap.Logger
 }
 
-func NewLogger(logstashHost string) (*zap.Logger, error) {
+func NewLogger(logstashHost string) (*Logger, error) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "timestamp",
 		LevelKey:      "level",
@@ -39,7 +39,7 @@ func NewLogger(logstashHost string) (*zap.Logger, error) {
 	)
 
 	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
-	return logger, nil
+	return &Logger{zapLogger: logger}, nil
 }
 
 func (l *Logger) Info(msg string, fields ...zap.Field) {
